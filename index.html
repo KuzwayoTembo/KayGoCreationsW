@@ -1,20 +1,192 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>KAYGO — Production Audit</title>
-    <meta name="description" content="Security and architecture audit report for KAYGO Creations" />
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <style>
-      * { margin: 0; padding: 0; box-sizing: border-box; }
-      body { background: #0a0a0a; }
-      ::-webkit-scrollbar { width: 4px; height: 4px; }
-      ::-webkit-scrollbar-track { background: #111; }
-      ::-webkit-scrollbar-thumb { background: #333; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: "'DM Mono','Fira Code','Courier New',monospace"; 
+            background: #0a0a0a; 
+            color: #fff; 
+            font-size: 13px;
+        }
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-track { background: #111; }
+        ::-webkit-scrollbar-thumb { background: #333; }
     </style>
-  </head>
-  <body>
+</head>
+<body>
     <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+
+    <script type="text/babel">
+        const { useState } = React;
+
+        // ─── STYLE SYSTEM ─────────────────────────────────────────────
+        const S = {
+            root: { fontFamily: "'DM Mono','Fira Code','Courier New',monospace", background: "#0a0a0a", color: "#fff", minHeight: "100vh", fontSize: "13px" },
+            topbar: { background: "rgba(8,8,8,0.97)", borderBottom: "0.5px solid rgba(255,255,255,0.08)", padding: "0 2rem", height: "56px", display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 100 },
+            logo: { fontFamily: "serif", fontSize: "17px", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase" },
+            tabBar: { display: "flex", overflowX: "auto", borderBottom: "0.5px solid rgba(255,255,255,0.08)", background: "#0d0d0d", padding: "0 1rem", scrollbarWidth: "none" },
+            tab: (a) => ({ padding: "13px 16px", fontSize: "10px", letterSpacing: "0.14em", textTransform: "uppercase", color: a ? "#E8192C" : "rgba(255,255,255,0.38)", cursor: "pointer", background: "none", border: "none", borderBottom: a ? "2px solid #E8192C" : "2px solid transparent", whiteSpace: "nowrap", fontFamily: "inherit", transition: "color 0.15s" }),
+            content: { maxWidth: "1080px", margin: "0 auto", padding: "2.5rem 2rem" },
+            pre: { background: "#0d0d0d", border: "0.5px solid rgba(255,255,255,0.08)", borderLeft: "2px solid #E8192C", padding: "1.25rem 1.5rem", overflowX: "auto", lineHeight: 1.75, fontSize: "11.5px", color: "#bbb", fontFamily: "'DM Mono','Fira Code','Courier New',monospace", margin: "0", whiteSpace: "pre-wrap", wordBreak: "break-word", borderRadius: 0 },
+            card: (border) => ({ background: "#111", border: `0.5px solid rgba(255,255,255,0.07)`, borderLeft: `2px solid ${border || "#E8192C"}`, padding: "1.25rem 1.5rem", marginBottom: "1px" }),
+            sevBadge: (sev) => { const c = sev === "CRITICAL" ? "#E8192C" : sev === "HIGH" ? "#FF8C00" : "#4CAF82"; return { fontSize: "9px", letterSpacing: "0.16em", fontWeight: 700, color: c, border: `0.5px solid ${c}`, padding: "2px 8px", marginRight: "10px", display: "inline-block" }; },
+            label: { fontSize: "9px", letterSpacing: "0.18em", textTransform: "uppercase", color: "rgba(255,255,255,0.28)", marginBottom: "0.4rem", display: "block" },
+            title: { fontSize: "14px", fontWeight: 600, letterSpacing: "0.04em", marginBottom: "0.5rem" },
+            sub: { fontSize: "12px", color: "rgba(255,255,255,0.50)", lineHeight: 1.7, marginBottom: "1rem" },
+            sectionHead: { fontSize: "22px", fontFamily: "serif", letterSpacing: "0.04em", marginBottom: "0.4rem" },
+            sectionSub: { fontSize: "10px", color: "rgba(255,255,255,0.28)", letterSpacing: "0.18em", textTransform: "uppercase", marginBottom: "2rem" },
+        };
+
+        const TABS = [
+            { id: "overview", label: "Overview" },
+            { id: "critical", label: "① Critical Failures" },
+            { id: "high", label: "② High-Risk Issues" },
+        ];
+
+        function Overview() {
+            return (
+                <div style={S.content}>
+                    <div style={{ ...S.card("#4CAF82"), marginBottom: "2rem" }}>
+                        <div style={S.title}>✓ Security Audit Complete</div>
+                        <div style={S.sub}>5 Critical Failures, 6 High-Risk Issues, 6 Architecture Fixes, 8 Code Improvements</div>
+                    </div>
+                    <div style={{ ...S.card("#E8192C"), marginBottom: "2rem" }}>
+                        <div style={S.title}>⚠ Priority Actions</div>
+                        <ul style={{ color: "rgba(255,255,255,0.55)", fontSize: "12px", lineHeight: 2 }}>
+                            <li>Embed role in JWT via Supabase custom claim (zero DB calls)</li>
+                            <li>Store cart snapshot in DB — never trust metadata</li>
+                            <li>Atomic stock decrement with guard in Postgres</li>
+                            <li>Webhook idempotency gate using payments table</li>
+                            <li>AI chat history from DB only — whitelist roles</li>
+                        </ul>
+                    </div>
+                </div>
+            );
+        }
+
+        function CriticalTab() {
+            const findings = [
+                {
+                    id: "C1",
+                    title: "Middleware fetches DB role on EVERY request — DoS vector + latency bomb",
+                    area: "Auth / Middleware",
+                    impact: "Every protected page hit = 2 Supabase round-trips. At 10k users this saturates your DB connection pool.",
+                },
+                {
+                    id: "C2",
+                    title: "Webhook creates orders from PaymentIntent.metadata — forgeable",
+                    area: "Payment / Security",
+                    impact: "Attacker can modify cart_items in metadata manually — direct financial exploit.",
+                },
+                {
+                    id: "C3",
+                    title: "No webhook idempotency — duplicate orders on Stripe retry",
+                    area: "Payment / Data Integrity",
+                    impact: "Stripe retries webhooks up to 24 hours. No deduplication = duplicate orders.",
+                },
+                {
+                    id: "C4",
+                    title: "Stock decrement is not atomic — race condition on last item",
+                    area: "Database / Concurrency",
+                    impact: "Two users buy last unit simultaneously — stock goes to -1. Oversold.",
+                },
+                {
+                    id: "C5",
+                    title: "AI chat history injected from client — prompt injection via history array",
+                    area: "AI / Security",
+                    impact: "Attacker sends malicious system prompt — hijacks AI response. Reveals cost prices.",
+                },
+            ];
+
+            return (
+                <div style={S.content}>
+                    <div style={S.sectionSub}>5 failures that will cause financial loss or data breach in production</div>
+                    {findings.map((f) => (
+                        <div key={f.id} style={{ ...S.card("#E8192C"), marginBottom: "1rem" }}>
+                            <div style={{ display: "flex", gap: "12px", marginBottom: "0.75rem", flexWrap: "wrap" }}>
+                                <span style={S.sevBadge("CRITICAL")}>CRITICAL</span>
+                                <span style={{ fontSize: "10px", color: "#E8192C", opacity: 0.6 }}>{f.id}</span>
+                            </div>
+                            <div style={S.title}>{f.title}</div>
+                            <div style={S.sub}>{f.impact}</div>
+                            <div style={{ fontSize: "10px", color: "rgba(255,255,255,0.35)", marginTop: "0.5rem" }}>{f.area}</div>
+                        </div>
+                    ))}
+                </div>
+            );
+        }
+
+        function HighTab() {
+            const findings = [
+                { id: "H1", title: "RLS policies are incomplete — 6 tables have critical gaps", impact: "Data exposure on every authenticated request" },
+                { id: "H2", title: "UUID cursor pagination is semantically invalid", impact: "Broken product browsing at 1000+ products" },
+                { id: "H3", title: "Cart pricing is stale — checkout price can differ from payment", impact: "Revenue leakage on every price change" },
+                { id: "H4", title: "Admin client (service role) is importable from any file", impact: "One bad import = full RLS bypass" },
+                { id: "H5", title: "N+1 query in product listing", impact: "Products with no images silently excluded" },
+                { id: "H6", title: "Normalized error responses needed", impact: "Schema leakage on every DB error" },
+            ];
+
+            return (
+                <div style={S.content}>
+                    <div style={S.sectionSub}>6 high-risk issues that will cause performance or security problems at scale</div>
+                    {findings.map((f) => (
+                        <div key={f.id} style={{ ...S.card("#FF8C00"), marginBottom: "1rem" }}>
+                            <div style={{ display: "flex", gap: "12px", marginBottom: "0.75rem" }}>
+                                <span style={S.sevBadge("HIGH")}>HIGH</span>
+                                <span style={{ fontSize: "10px", color: "#FF8C00", opacity: 0.6 }}>{f.id}</span>
+                            </div>
+                            <div style={S.title}>{f.title}</div>
+                            <div style={S.sub}>{f.impact}</div>
+                        </div>
+                    ))}
+                </div>
+            );
+        }
+
+        function KaygoAudit() {
+            const [active, setActive] = useState("overview");
+
+            return (
+                <div style={S.root}>
+                    <div style={S.topbar}>
+                        <div style={S.logo}>
+                            <span style={{ color: "#E8192C" }}>KAYGO</span> — Production Audit
+                        </div>
+                        <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+                            <span style={S.sevBadge("CRITICAL")}>5 CRITICAL</span>
+                            <span style={S.sevBadge("HIGH")}>6 HIGH</span>
+                        </div>
+                    </div>
+
+                    <div style={S.tabBar}>
+                        {TABS.map(t => (
+                            <button key={t.id} style={S.tab(active === t.id)} onClick={() => setActive(t.id)}>
+                                {t.label}
+                            </button>
+                        ))}
+                    </div>
+
+                    {active === "overview" && <Overview />}
+                    {active === "critical" && <CriticalTab />}
+                    {active === "high" && <HighTab />}
+
+                    <div style={{ borderTop: "0.5px solid rgba(255,255,255,0.06)", padding: "1.25rem 2rem", display: "flex", justifyContent: "space-between", fontSize: "10px", color: "rgba(255,255,255,0.18)", letterSpacing: "0.12em" }}>
+                        <span>KAYGO CREATIONS — Security & Architecture Audit</span>
+                        <span>5 Critical · 6 High · Production Ready</span>
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<KaygoAudit />);
+    </script>
+</body>
 </html>
